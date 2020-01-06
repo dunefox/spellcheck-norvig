@@ -98,7 +98,7 @@ function spelltest(tests; verbose=false)
         end
     end
     dt = time() - start
-    println("$(round((good / n), digits=3) * 100) of $(n) correct ($(round((unknown / n), digits=3) * 100) unknown) at $(round((n / dt), digits=3)) words per second")
+    println("$(round((good / n), digits=3)) of $(n) correct ($(round((unknown / n), digits=3)) unknown) at $(round((n / dt), digits=3)) words per second")
 end
 
 function testset(lines)
@@ -106,3 +106,5 @@ function testset(lines)
             for (right, wrongs) in [split(line, ":") for line in lines]
             for wrong in split(wrongs)]
 end
+
+@time spelltest(testset(readlines(open("spell-testset1.txt"))))
