@@ -12,40 +12,66 @@ end
 
 words(text) = [m.match for m in eachmatch(r"\w+", lowercase(text))]
 
-WORDS = countmap(words(read(open("./big.txt"), String)))
+const WORDS = countmap(words(read(open("./big.txt"), String)))
+const KNOWN = Set(keys(WORDS))
+
+known(word) = word in KNOWN
 
 P(word; N=sum(values(WORDS))) = get(WORDS, word, 0.0) / N
 
 correction(word) = argmax_(candidates(word), P)
 
-# candidates(word) = get(known(word), [word], false) || get(known, edits1(word), false) || get(known, edits2(word), false) || [word]
-
 function candidates(word)
-    if (r = (known([word]))) != []
-        r
-    elseif (r = (known(edits1(word)))) != []
-        r
-    elseif (r = (known(edits2(word)))) != []
-        r
-    else
-        [word]
+    known(word) && return (word,)
+
+    r = edits1(word, known)
+    length(r)>0 && return r
+
+    r = edits2(word)
+    length(r)>0 && return r
+
+    (word,)
+end
+
+
+
+function edits1(word, filter=w->true)
+    edits1!(Set(String[]), word, filter)
+end
+
+function edits1!(edits, word, filter=w->true)
+    splits = Set([("", word)])
+    for i in 1:length(word)
+        push!(splits, (word[1:i], word[i + 1:end]))
     end
+
+    push_word(w) = filter(w) && push!(edits, w)
+
+    letters = 'a':'z'
+    for (L, R) in splits
+        if R != ""
+            push_word(L * R[2:end])
+            for c in letters
+                push_word(L * c * R[2:end])
+            end
+        end
+
+        length(R) > 1 && push_word(L * R[2] * R[1] * R[3:end])
+
+        for c in 'a':'z'
+            push_word(L * c * R)
+        end
+    end
+    edits
 end
 
-known(words) = [w for w in words if w in keys(WORDS)]
-
-function edits1(word)
-    letters    = "abcdefghijklmnopqrstuvwxyz"
-    splits     = [(word[1:i], word[i + 1:end])    for i in 1:length(word)]
-    splits     = [("", word); splits]
-    deletes    = [L * R[2:end]                    for (L, R) in splits if R != ""]
-    transposes = [L * R[2] * R[1] * R[3:end]      for (L, R) in splits if length(R) > 1]
-    replaces   = [L * c * R[2:end]                for (L, R) in splits if R != "" for c in letters]
-    inserts    = [L * c * R                       for (L, R) in splits for c in letters]
-    unique([deletes; transposes; replaces; inserts])
+function edits2(word)
+    edits = Set(String[])
+    for e1 in edits1(word)
+        edits1!(edits, e1, known)
+    end
+    edits
 end
-
-edits2(word) = unique([e2 for e1 in edits1(word) for e2 in edits1(e1)])
 
 function most_common(n::Integer)
      collect(zip(sort(WORDS, by=x->WORDS[x], rev=true)))[1:n]
@@ -86,8 +112,9 @@ end
 function spelltest(tests; verbose=false)
     start = time()
     good, unknown = 0, 0
-    n = length(tests)
+    n = 0
     for (right, wrong) in tests
+        n += 1
         w = correction(wrong)
         good += (w == right)
         if w != right
