@@ -17,7 +17,7 @@ const KNOWN = Set(keys(WORDS))
 
 known(word) = word in KNOWN
 
-P(word; N=sum(values(WORDS))) = get(WORDS, word, 0.0) / N
+P(word) = get(WORDS, word, 0.0)
 
 correction(word) = argmax_(candidates(word), P)
 
@@ -134,6 +134,10 @@ function testset(lines)
             for wrong in split(wrongs)]
 end
 
+println("Running spell-testset1.txt")
+@time spelltest(testset(readlines(open("spell-testset1.txt"))))
+println("Running spell-testset2.txt")
+@time spelltest(testset(readlines(open("spell-testset2.txt"))))
 println("Running spell-testset1.txt")
 @time spelltest(testset(readlines(open("spell-testset1.txt"))))
 println("Running spell-testset2.txt")
