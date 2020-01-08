@@ -14,10 +14,11 @@ words(text) = [m.match for m in eachmatch(r"\w+", lowercase(text))]
 
 const WORDS = countmap(words(read(open("./big.txt"), String)))
 const KNOWN = Set(keys(WORDS))
+const sumwords =  sum(values(WORDS))
 
 known(word) = word in KNOWN
 
-P(word) = get(WORDS, word, 0.0)
+P(word; N=sumwords) = get(WORDS, word, 0.0) / N
 
 correction(word) = argmax_(candidates(word), P)
 
