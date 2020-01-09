@@ -20,12 +20,25 @@ known(word) = word in KNOWN
 
 P(word; N=sumwords) = get(WORDS, word, 0.0) / N
 
+function pairs(text)
+    d = Dict{Tuple{String, String}, String}()
+    for word in text
+        for i in 1:length(word)
+            L = word[1:(i-1)]
+            R = word[(i+1):end]
+            (P(get(d, (L, R), "")) < P(word)) && (d[(L, R)] = word)
+		end
+    end
+    d
+end
+const PAIRS = pairs(keys(WORDS))
+
 correction(word) = argmax_(candidates(word), P)
 
 function candidates(word)
     known(word) && return (word,)
 
-    r = edits1(word, known)
+    r = edits1(word)
     length(r)>0 && return r
 
     r = edits2(word)
@@ -34,22 +47,33 @@ function candidates(word)
     (word,)
 end
 
-
-
-function edits1(word, filter=w->true)
-    edits1!(Set(String[]), word, filter)
+function edits1(word)
+    edits1a!(Set(String[]), word)
 end
 
-function edits1!(edits, word, filter=w->true)
-    splits = Set([("", word)])
-    for i in 1:length(word)
-        push!(splits, (word[1:i], word[i + 1:end]))
+function edits1a!(edits, word)
+    push_word(w) = known(w) && push!(edits, w)
+    for i in 0:length(word)
+        L = word[1:i]
+        R = word[i+1:end]
+        if R != ""
+            push_word(L * R[2:end])
+            ((L, R[2:end]) in keys(PAIRS)) && (push!(edits, PAIRS[(L, R[2:end])])) 
+        end
+
+        length(R) > 1 && push_word(L * R[2] * R[1] * R[3:end])
+
+        ((L, R) in keys(PAIRS)) && (push!(edits, PAIRS[(L, R)]))
     end
+    edits
+end
 
-    push_word(w) = filter(w) && push!(edits, w)
-
+function edits1b!(edits, word)
+    push_word(w) = push!(edits, w)
     letters = 'a':'z'
-    for (L, R) in splits
+    for i in 0:length(word)
+        L = word[1:i]
+        R = word[i+1:end]
         if R != ""
             push_word(L * R[2:end])
             for c in letters
@@ -67,9 +91,12 @@ function edits1!(edits, word, filter=w->true)
 end
 
 function edits2(word)
+    ed1 = Set(String[])
+    edits1b!(ed1, word)
     edits = Set(String[])
-    for e1 in edits1(word)
-        edits1!(edits, e1, known)
+
+    for e1 in ed1
+        edits1a!(edits, e1)
     end
     edits
 end
